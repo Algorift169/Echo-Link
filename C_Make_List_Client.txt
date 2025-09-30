@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.31)
+project(ECHO_CLIENT)
+
+set(CMAKE_CXX_STANDARD 20)
+
+# Specify the client source file
+add_executable(ECHO_CLIENT main.cpp)
+
+# Link Winsock2 library for networking on Windows
+target_link_libraries(ECHO_CLIENT ws2_32)
