@@ -1,3 +1,4 @@
+// This is the server....
 #include <iostream>
 #include <winsock2.h>
 #include <thread>
@@ -285,3 +286,4 @@ int main() {
     WSACleanup();
     return 0;
 }
+
