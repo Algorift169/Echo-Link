@@ -28,9 +28,9 @@ void receiveMessages() {
         string message(buffer);
 
         if (message.rfind("[PRIVATE]", 0) == 0) {
-            cout << "\033[31m<<- " << message << "\033[0m" << endl;
+            cout << "<<- " << message << " " << endl;
         } else if (message.rfind("[PUBLIC]", 0) == 0) {
-            cout << "\033[32m<<- " << message << "\033[0m" << endl;
+            cout << "<<- " << message << " " << endl;
         } else if (message.rfind("USERS:", 0) == 0) {
             cout << "\n--- Users Online --- " << message.substr(6) << " ---\n";
         } else {
@@ -133,7 +133,7 @@ int main() {
                 string targetUser = inputLine.substr(1, spacePos - 1);
                 string messageBody = inputLine.substr(spacePos + 1);
 
-                cout << "\033[31m->> [PRIVATE] " << userName << ": " << messageBody << "\033[0m" << endl;
+                cout << "->> [PRIVATE] " << userName << ": " << messageBody << " " << endl;
 
                 string outgoingMessage = "/pm " + targetUser + " " + messageBody;
                 send(clientSocket, outgoingMessage.c_str(), (int)outgoingMessage.size(), 0);
@@ -144,7 +144,7 @@ int main() {
             }
         }
 
-        cout << "\033[32m->> [PUBLIC] " << userName << ": " << inputLine << "\033[0m" << endl;
+        cout << "->> [PUBLIC] " << userName << ": " << inputLine << " " << endl;
         send(clientSocket, inputLine.c_str(), (int)inputLine.size(), 0);
     }
 
@@ -152,3 +152,4 @@ int main() {
     WSACleanup();
     return 0;
 }
+
