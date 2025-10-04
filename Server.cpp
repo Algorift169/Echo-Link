@@ -1,4 +1,5 @@
-// This is the server....
+// This is the server...
+
 #include <iostream>
 #include <winsock2.h>
 #include <thread>
@@ -13,18 +14,18 @@
 #pragma comment(lib,"ws2_32.lib")
 using namespace std;
 
-// Structure to store information about a client
+// Structure to store information about a client...
 struct Client {
     SOCKET clientSocket;
     string userName;
 };
 
-// Global variables for client management
+// Global variables for client management...
 mutex clientMutex;
 vector<Client> clients;
-unordered_map<string, SOCKET> userSocketMap; // maps username -> client socket
+unordered_map<string, SOCKET> userSocketMap;
 
-// Helper function to trim spaces and newlines from a string
+// Helper function to trim spaces and newlines from a string...
 static string trim(const string &input) {
     size_t start = input.find_first_not_of(" \r\n\t");
     if (start == string::npos) return "";
@@ -32,7 +33,7 @@ static string trim(const string &input) {
     return input.substr(start, end-start+1);
 }
 
-// Send user list to all clients without locking (assumes caller has locked)
+// Send user list to all clients without locking...
 void sendUserListUnsafe() {
     string usersMessage = "USERS:";
     for (auto &client : clients) {
@@ -43,18 +44,18 @@ void sendUserListUnsafe() {
     }
 }
 
-// Send user list to all clients
+// Send user list to all clients...
 void sendUserList() {
     lock_guard<mutex> lock(clientMutex);
     sendUserListUnsafe();
 }
 
-// Send a message to a single client
+// Send a message to a single client...
 void sendMessage(SOCKET clientSocket, const string &message) {
     send(clientSocket, message.c_str(), (int)message.size(), 0);
 }
 
-// Broadcast a public message to all clients except the sender
+// Broadcast a public message to all clients except the sender...
 void sendPublicMessage(const string &formattedMessage, SOCKET senderSocket) {
     lock_guard<mutex> lock(clientMutex);
 
@@ -71,22 +72,22 @@ void sendPublicMessage(const string &formattedMessage, SOCKET senderSocket) {
     }
 }
 
-// Send private message to a specific target user
+// Send private message to a specific target user...
 void sendPrivateMessage(const string &formattedMessage, const string &targetUser, SOCKET senderSocket) {
     lock_guard<mutex> lock(clientMutex);
 
     cout << formattedMessage << endl; // server log
 
-    // Save to chat history
+    // Save to chat history...
     ofstream historyFile("chat_history.txt", ios::app);
     if (historyFile.is_open()) historyFile << formattedMessage << "\n";
 
     auto it = userSocketMap.find(targetUser);
     if (it != userSocketMap.end()) {
         SOCKET targetSocket = it->second;
-        sendMessage(targetSocket, formattedMessage); // deliver to target only
+        sendMessage(targetSocket, formattedMessage);
     } else {
-        // notify sender if user not found
+        // notify sender if user not found...
         for (auto &client : clients) {
             if (client.clientSocket == senderSocket) {
                 string serverReply = "[SERVER] User '" + targetUser + "' not found.";
@@ -97,7 +98,7 @@ void sendPrivateMessage(const string &formattedMessage, const string &targetUser
     }
 }
 
-// Remove a client from the lists when disconnected
+// Remove a client from the lists when disconnected...
 void removeClient(SOCKET clientSocket) {
     lock_guard<mutex> lock(clientMutex);
 
@@ -115,7 +116,7 @@ void removeClient(SOCKET clientSocket) {
         [&](const Client &c){ return c.clientSocket == clientSocket; }), clients.end());
 }
 
-// Function to handle all messages from a single client
+// Function to handle all messages from a single client...
 void clientHandler(Client clientInfo) {
     char buffer[4096];
     SOCKET clientSocket = clientInfo.clientSocket;
@@ -141,20 +142,20 @@ void clientHandler(Client clientInfo) {
                 sendMessage(clientSocket, serverReply);
             }
         } else {
-            // Public message
+            // Public message...
             string formattedMessage = "[PUBLIC] " + clientInfo.userName + ": " + message;
             sendPublicMessage(formattedMessage, clientSocket);
         }
     }
 
-    // Client disconnected
+    // Client disconnected...
     closesocket(clientSocket);
     removeClient(clientSocket);
     sendUserList();
     cout << "[SERVER] User disconnected: " << clientInfo.userName << endl;
 }
 
-// Get local IP address of the machine
+// Get local IP address of the machine...
 string getLocalIp() {
     char hostName[256];
     if (gethostname(hostName, sizeof(hostName)) == SOCKET_ERROR) return "127.0.0.1";
@@ -171,7 +172,7 @@ string getLocalIp() {
     return inet_ntoa(*(in_addr*)hostInfo->h_addr_list[0]);
 }
 
-// UDP thread to respond to server discovery messages
+// UDP thread to respond to server discovery messages...
 void udpDiscoveryResponder(unsigned short port) {
     SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
     if (udpSocket == INVALID_SOCKET) return;
@@ -286,4 +287,3 @@ int main() {
     WSACleanup();
     return 0;
 }
-
