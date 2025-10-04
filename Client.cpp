@@ -1,3 +1,5 @@
+// This is the client code...
+
 #include <iostream>
 #include <winsock2.h>
 #include <thread>
@@ -7,20 +9,23 @@
 #pragma comment(lib,"ws2_32.lib")
 using namespace std;
 
+// Global veriables...
 SOCKET clientSocket = INVALID_SOCKET;
 string userName;
-const int SERVER_PORT = 8080;
-const int DISCOVERY_PORT = 8888;
+const int SERVER_PORT = 8080;             //Main server port (TCP)
+const int DISCOVERY_PORT = 8888;         // Server discovery port (UDP)
 
+// Text cleaner function...
 static string trim(const string &s) {
     size_t a = s.find_first_not_of(" \r\n\t");
-    if (a == string::npos) return "";
+    if (a == string::npos) return " ";
     size_t b = s.find_last_not_of(" \r\n\t");
     return s.substr(a, b - a + 1);
 }
 
+// Function to recive messages...
 void receiveMessages() {
-    char buffer[4096];
+    char buffer[4096];            // MSG Space= 4 KB
     while (true) {
         int bytesRead = recv(clientSocket, buffer, (int)sizeof(buffer) - 1, 0);
         if (bytesRead <= 0) break;
@@ -39,6 +44,7 @@ void receiveMessages() {
     }
 }
 
+// Auto discover the server....
 string findServer(int timeoutMs = 3000) {
     SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
     if (udpSocket == INVALID_SOCKET) return "";
@@ -133,18 +139,18 @@ int main() {
                 string targetUser = inputLine.substr(1, spacePos - 1);
                 string messageBody = inputLine.substr(spacePos + 1);
 
-                cout << "->> [PRIVATE] " << userName << ": " << messageBody << " " << endl;
+                cout << "[PRIVATE] " << userName << ": " << messageBody << " " << endl;
 
                 string outgoingMessage = "/pm " + targetUser + " " + messageBody;
                 send(clientSocket, outgoingMessage.c_str(), (int)outgoingMessage.size(), 0);
                 continue;
             } else {
-                cout << "[CLIENT] Invalid private format. Use: @username message\n";
+                cout << "[CLIENT] Invalid private format! Please Use: @username(space)message\n";
                 continue;
             }
         }
 
-        cout << "->> [PUBLIC] " << userName << ": " << inputLine << " " << endl;
+        cout << "[PUBLIC] " << userName << ": " << inputLine << " " << endl;
         send(clientSocket, inputLine.c_str(), (int)inputLine.size(), 0);
     }
 
@@ -152,4 +158,3 @@ int main() {
     WSACleanup();
     return 0;
 }
-
