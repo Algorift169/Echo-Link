@@ -1,5 +1,3 @@
-// This is the client code...
-
 #include <iostream>
 #include <winsock2.h>
 #include <thread>
@@ -12,10 +10,11 @@ using namespace std;
 // Global veriables...
 SOCKET clientSocket = INVALID_SOCKET;
 string userName;
-const int SERVER_PORT = 8080;             //Main server port (TCP)
+const int SERVER_PORT = 8080;             // Main server port (TCP)
 const int DISCOVERY_PORT = 8888;         // Server discovery port (UDP)
 
-// Text cleaner function...
+
+// Text cleaner function: To remove carriage returns, newlines & tabs...
 static string trim(const string &s) {
     size_t a = s.find_first_not_of(" \r\n\t");
     if (a == string::npos) return " ";
@@ -44,7 +43,7 @@ void receiveMessages() {
     }
 }
 
-// Auto discover the server....
+// Auto discover the server...
 string findServer(int timeoutMs = 3000) {
     SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
     if (udpSocket == INVALID_SOCKET) return "";
