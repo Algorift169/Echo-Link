@@ -1,5 +1,3 @@
-// This is the server...
-
 #include <iostream>
 #include <winsock2.h>
 #include <thread>
@@ -25,7 +23,7 @@ mutex clientMutex;
 vector<Client> clients;
 unordered_map<string, SOCKET> userSocketMap;
 
-// Helper function to trim spaces and newlines from a string...
+// Text cleaner function: To remove carriage returns, newlines & tabs...
 static string trim(const string &input) {
     size_t start = input.find_first_not_of(" \r\n\t");
     if (start == string::npos) return "";
@@ -53,6 +51,23 @@ void sendUserList() {
 // Send a message to a single client...
 void sendMessage(SOCKET clientSocket, const string &message) {
     send(clientSocket, message.c_str(), (int)message.size(), 0);
+}
+
+// Send full chat history to a newly connected client...
+void sendChatHistory(SOCKET clientSocket) {
+    ifstream historyFile("chat_history.txt");
+    if (historyFile.is_open()) {
+        string lineFromHistory;
+        sendMessage(clientSocket, "--- Chat History ---\n");
+        while (getline(historyFile, lineFromHistory)) {
+            lineFromHistory = trim(lineFromHistory);
+            if (!lineFromHistory.empty())
+                sendMessage(clientSocket, lineFromHistory + "\n");
+        }
+        sendMessage(clientSocket, "--------------------\n");
+    } else {
+        sendMessage(clientSocket, "--- No chat history available ---\n");
+    }
 }
 
 // Broadcast a public message to all clients except the sender...
@@ -278,6 +293,9 @@ int main() {
 
         // update user list
         sendUserListUnsafe();
+
+        // send chat history to the new client
+        sendChatHistory(clientSocket);
 
         // start client handler thread
         thread(clientHandler, Client{clientSocket, uniqueUserName}).detach();
