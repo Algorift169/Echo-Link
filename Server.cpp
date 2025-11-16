@@ -91,18 +91,13 @@ void sendPublicMessage(const string &formattedMessage, SOCKET senderSocket) {
 void sendPrivateMessage(const string &formattedMessage, const string &targetUser, SOCKET senderSocket) {
     lock_guard<mutex> lock(clientMutex);
 
-    cout << formattedMessage << endl; // server log
-
-    // Save to chat history...
-    ofstream historyFile("chat_history.txt", ios::app);
-    if (historyFile.is_open()) historyFile << formattedMessage << "\n";
+    cout << formattedMessage << endl;
 
     auto it = userSocketMap.find(targetUser);
     if (it != userSocketMap.end()) {
         SOCKET targetSocket = it->second;
         sendMessage(targetSocket, formattedMessage);
     } else {
-        // notify sender if user not found...
         for (auto &client : clients) {
             if (client.clientSocket == senderSocket) {
                 string serverReply = "[SERVER] User '" + targetUser + "' not found.";
