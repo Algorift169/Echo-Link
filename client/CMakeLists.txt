@@ -4,8 +4,9 @@ project(Client)
 set(CMAKE_CXX_STANDARD 20)
 
 # Specify the client source file
-add_executable(Client main.cpp)
+add_executable(Client client.cpp)
 
-# Link Winsock2 library for networking on Windows
-target_link_libraries(Client ws2_32)
-
+# Link libraries based on platform
+if (WIN32)
+    target_link_libraries(Client ws2_32)
+endif()

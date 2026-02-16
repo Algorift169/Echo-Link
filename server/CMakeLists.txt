@@ -3,7 +3,10 @@ project(Server)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(Server main.cpp)
+# Specify the server source file
+add_executable(Server server.cpp)
 
-# Link Winsock2 library for networking
-target_link_libraries(Server ws2_32)
+# Link libraries based on platform
+if (WIN32)
+    target_link_libraries(Server ws2_32)
+endif()

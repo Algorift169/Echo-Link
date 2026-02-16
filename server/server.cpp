@@ -1,5 +1,24 @@
+// Cross-platform socket includes
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib, "ws2_32.lib")
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    #include <netdb.h>
+    #include <fcntl.h>
+    #include <errno.h>
+    #define SOCKET int
+    #define INVALID_SOCKET -1
+    #define SOCKET_ERROR -1
+    #define closesocket close
+#endif
+
 #include <iostream>
-#include <winsock2.h>
 #include <thread>
 #include <vector>
 #include <string>
@@ -8,8 +27,8 @@
 #include <mutex>
 #include <unordered_map>
 #include <chrono>
+#include <cstring>
 
-#pragma comment(lib,"ws2_32.lib")
 using namespace std;
 
 // Structure to store information about a client...
@@ -22,6 +41,11 @@ struct Client {
 mutex clientMutex;
 vector<Client> clients;
 unordered_map<string, SOCKET> userSocketMap;
+
+// Color codes for terminal output
+const string COLOR_RED = "\033[31m";
+const string COLOR_GREEN = "\033[32m";
+const string COLOR_RESET = "\033[0m";
 
 // Text cleaner function: To remove carriage returns, newlines & tabs...
 static string trim(const string &input) {
@@ -38,7 +62,7 @@ void sendUserListUnsafe() {
         usersMessage += client.userName + ",";
     }
     for (auto &client : clients) {
-        send(client.clientSocket, usersMessage.c_str(), (int)usersMessage.size(), 0);
+        send(client.clientSocket, usersMessage.c_str(), usersMessage.size(), 0);
     }
 }
 
@@ -50,7 +74,7 @@ void sendUserList() {
 
 // Send a message to a single client...
 void sendMessage(SOCKET clientSocket, const string &message) {
-    send(clientSocket, message.c_str(), (int)message.size(), 0);
+    send(clientSocket, message.c_str(), message.size(), 0);
 }
 
 // Send full chat history to a newly connected client...
@@ -74,7 +98,8 @@ void sendChatHistory(SOCKET clientSocket) {
 void sendPublicMessage(const string &formattedMessage, SOCKET senderSocket) {
     lock_guard<mutex> lock(clientMutex);
 
-    cout << formattedMessage << endl; // server log
+    // Server console output in green
+    cout << COLOR_GREEN << formattedMessage << COLOR_RESET << endl;
 
     // Save to chat history
     ofstream historyFile("chat_history.txt", ios::app);
@@ -91,7 +116,8 @@ void sendPublicMessage(const string &formattedMessage, SOCKET senderSocket) {
 void sendPrivateMessage(const string &formattedMessage, const string &targetUser, SOCKET senderSocket) {
     lock_guard<mutex> lock(clientMutex);
 
-    cout << formattedMessage << endl;
+    // Server console output in red
+    cout << COLOR_RED << formattedMessage << COLOR_RESET << endl;
 
     auto it = userSocketMap.find(targetUser);
     if (it != userSocketMap.end()) {
@@ -184,13 +210,19 @@ string getLocalIp() {
 
 // UDP thread to respond to server discovery messages...
 void udpDiscoveryResponder(unsigned short port) {
-    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    #ifdef _WIN32
+        SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    #else
+        int udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    #endif
+    
     if (udpSocket == INVALID_SOCKET) return;
 
     sockaddr_in udpAddr{};
     udpAddr.sin_family = AF_INET;
     udpAddr.sin_port = htons(port);
     udpAddr.sin_addr.s_addr = INADDR_ANY;
+    
     if (bind(udpSocket, (sockaddr*)&udpAddr, sizeof(udpAddr)) == SOCKET_ERROR) {
         closesocket(udpSocket);
         return;
@@ -198,7 +230,7 @@ void udpDiscoveryResponder(unsigned short port) {
 
     char buffer[512];
     sockaddr_in clientAddr{};
-    int clientAddrLen = sizeof(clientAddr);
+    socklen_t clientAddrLen = sizeof(clientAddr);
     string localIp = getLocalIp();
 
     while (true) {
@@ -207,24 +239,30 @@ void udpDiscoveryResponder(unsigned short port) {
             buffer[len] = '\0';
             string received = buffer;
             if (received == "DISCOVER_CHAT_SERVER") {
-                sendto(udpSocket, localIp.c_str(), (int)localIp.size(), 0, (sockaddr*)&clientAddr, clientAddrLen);
+                sendto(udpSocket, localIp.c_str(), localIp.size(), 0, (sockaddr*)&clientAddr, clientAddrLen);
             }
         }
     }
 }
 
 int main() {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
-        cerr << "WSAStartup failed\n";
-        return 1;
-    }
+    #ifdef _WIN32
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
+            cerr << "WSAStartup failed\n";
+            return 1;
+        }
+    #endif
 
     SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == INVALID_SOCKET) {
         cerr << "Socket creation failed\n";
         return 1;
     }
+
+    // Allow socket reuse
+    int opt = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
@@ -260,7 +298,7 @@ int main() {
     // accept clients continuously
     while (true) {
         sockaddr_in clientAddr{};
-        int clientAddrLen = sizeof(clientAddr);
+        socklen_t clientAddrLen = sizeof(clientAddr);
         SOCKET clientSocket = accept(serverSocket, (sockaddr*)&clientAddr, &clientAddrLen);
         if (clientSocket == INVALID_SOCKET) continue;
 
@@ -297,6 +335,10 @@ int main() {
     }
 
     closesocket(serverSocket);
-    WSACleanup();
+    
+    #ifdef _WIN32
+        WSACleanup();
+    #endif
+    
     return 0;
 }
