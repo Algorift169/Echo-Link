@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.31)
+project(Server)
+
+set(CMAKE_CXX_STANDARD 20)
+
+add_executable(Server main.cpp)
+
+# Link Winsock2 library for networking
+target_link_libraries(Server ws2_32)
